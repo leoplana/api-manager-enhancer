@@ -73,17 +73,16 @@ var snakeToCamel = function (input) {
 
 var createLogFilter = function (apiVersionId, entrypointId) {
 
-	var today = moment().format("YYYY-MM-DDT00:00:00.000\\Z");
-	var thirtyDaysAgo = moment().subtract(30, 'days').format("YYYY-MM-DDT00:00:00.000\\Z");
+	var today = moment();
+	var thirtyDaysAgo = moment().subtract(30, 'days');
 
-	return angular.element(document.body).injector().get('LogService').getFormattedFilters(
+	return getFormattedFilters(
 		{
 			startDate: thirtyDaysAgo,
 			endDate: today,
 			apiVersionId: apiVersionId,
 			entrypointId: entrypointId
 		}, 1, "5m");
-
 };
 
 var getApiLogs = function (api, entrypoints) {
@@ -91,7 +90,7 @@ var getApiLogs = function (api, entrypoints) {
 	var requestsParameters = [];
 	api.versions.forEach(v => entrypoints.forEach(e => requestsParameters.push({ apiVersion: v, entrypoint: e })));
 
-	var requests = requestsParameters.map(r => fetch("https://analytics-azure.api.zup.me/logs/search", {
+	var requests = requestsParameters.map(r => fetch("https://analytics-api-saas.api.zup.me/logs/search", {
 		"headers": getCommonHeaders(),
 		"referrer": "https://vli.zup.me/api-manager/",
 		"referrerPolicy": "no-referrer-when-downgrade",
@@ -279,7 +278,7 @@ var downloadEndpointGroupExcelReport = function () {
 				env.url,
 				env.virtual_host,
 				env.context_attributes ? Object.keys(env.context_attributes).map(k => k + "=" + env.context_attributes[k].value.content).join(";\n") : '',
-				_.unique(e.deployMatrix.filter(d => d.end_point_environment.name === env.end_point_environment.name).map(d => d.api.name + ' - ' + d.api.path.replace('/', ''))).join(";\n")
+				_.uniq(e.deployMatrix.filter(d => d.end_point_environment.name === env.end_point_environment.name).map(d => d.api.name + ' - ' + d.api.path.replace('/', ''))).join(";\n")
 				]
 			)
 		).flat();
@@ -433,7 +432,7 @@ var appendLogsToApplication = function(app, entrypoints) {
 }
 
 var executeLogBatchRequest = function(requests) {
-	return Promise.all(requests.map(r => fetchPlus("https://analytics-azure.api.zup.me/logs/search", {
+	return Promise.all(requests.map(r => fetchPlus("https://analytics-api-saas.api.zup.me/logs/search", {
 		"headers": getCommonHeaders(),
 		"referrer": "https://vli.zup.me/api-manager/",
 		"referrerPolicy": "no-referrer-when-downgrade",
@@ -661,10 +660,10 @@ var getApiVersionResources = function (apiVersion) {
 
 var createLogByResourceMethodFilter = function (apiVersionId, entrypointId, resourceId, httpVerb, applicationId) {
 
-	var today = moment().format("YYYY-MM-DDT00:00:00.000\\Z");
-	var thirtyDaysAgo = moment().subtract(30, 'days').format("YYYY-MM-DDT00:00:00.000\\Z");
+	var today = moment();
+	var thirtyDaysAgo = moment().subtract(30, 'days');
 
-	return angular.element(document.body).injector().get('LogService').getFormattedFilters(
+	return getFormattedFilters(
 		{
 			startDate: thirtyDaysAgo,
 			endDate: today,
@@ -672,7 +671,7 @@ var createLogByResourceMethodFilter = function (apiVersionId, entrypointId, reso
 			entrypointId: entrypointId,
 			applicationId : applicationId,
 			resourceId: resourceId,
-			method: httpVerb
+			httpVerb: httpVerb
 		}, 1, "5m");
 
 };
@@ -686,7 +685,7 @@ var appendResourceLogs = function (resource, entrypoints) {
 	var requestsParameters = entrypoints.map(e => resource.resource_methods.map(m => (
 		{ apiVersionId: resource.api_version, entrypointName: e.name, entrypointId: e.id, resourceId: resource.id, httpVerb: m }))).flat();
 
-	var requests = requestsParameters.map(r => fetchPlus("https://analytics-azure.api.zup.me/logs/search", {
+	var requests = requestsParameters.map(r => fetchPlus("https://analytics-api-saas.api.zup.me/logs/search", {
 		"headers": getCommonHeaders(),
 		"referrer": "https://vli.zup.me/api-manager/",
 		"referrerPolicy": "no-referrer-when-downgrade",
@@ -709,7 +708,7 @@ var appendResourceLogs = function (resource, entrypoints) {
 			}));
 
 
-			resource.logs = _.unique(resource.logs.map(r => r.method)).map(m => ({ method: m, items: resource.logs.filter(r => r.method === m).map(r => r.item) }));
+			resource.logs = _.uniq(resource.logs.map(r => r.method)).map(m => ({ method: m, items: resource.logs.filter(r => r.method === m).map(r => r.item) }));
 
 			return Promise.resolve(resource);
 		}
@@ -967,7 +966,7 @@ var appendPortalLogs = function(p) {
 		 && _.isArray(p["default_entry_points"]) && p["default_entry_points"].length > 0 ) {
 
 		var requests =  p["default_entry_points"].map(e => ({applicationId : p.clientApplications[0].id, entrypointId : e.id }));
-		return Promise.all(requests.map(r => fetchPlus("https://analytics-azure.api.zup.me/logs/search", {
+		return Promise.all(requests.map(r => fetchPlus("https://analytics-api-saas.api.zup.me/logs/search", {
 			"headers": getCommonHeaders(),
 			"referrer": "https://vli.zup.me/api-manager/",
 			"referrerPolicy": "no-referrer-when-downgrade",
@@ -1081,4 +1080,21 @@ const fetchPlus = (url, options = {}, retries) =>
     })
     .catch(error => console.error(error.message))
 
+
+function getFormattedFilters(e, size, scroll) {
+	return {
+		"search": {
+			"indexes": Array.of(e.startDate?.format("YYYYMMDD"), e.endDate?.format("YYYYMMDD")).filter(n => n).sort(),
+			"entrypoint_id": e.entrypointId,
+			"start_date": e.startDate?.format("YYYY-MM-DDT00:00:00.000\\Z"),
+			"end_date": e.endDate?.format("YYYY-MM-DDT00:00:00.000\\Z"),
+			"api_version_id": e.apiVersionId,
+			"application_id": e.applicationId,
+			"resource_id": e.resourceId,
+			"http_verb" : e.httpVerb?.http_verb,
+			"scroll": scroll,
+			"size": size
+		}
+	};
+}
 
