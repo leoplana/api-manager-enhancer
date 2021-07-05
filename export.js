@@ -90,7 +90,7 @@ var getApiLogs = function (api, entrypoints) {
 	var requestsParameters = [];
 	api.versions.forEach(v => entrypoints.forEach(e => requestsParameters.push({ apiVersion: v, entrypoint: e })));
 
-	var requests = requestsParameters.map(r => fetch("https://analytics-api-saas.api.zup.me/logs/search", {
+	var requests = requestsParameters.map(r => fetch("https://analytics-api-aws.api.zup.me/logs/search", {
 		"headers": getCommonHeaders(),
 		"referrer": "https://vli.zup.me/api-manager/",
 		"referrerPolicy": "no-referrer-when-downgrade",
@@ -432,7 +432,7 @@ var appendLogsToApplication = function(app, entrypoints) {
 }
 
 var executeLogBatchRequest = function(requests) {
-	return Promise.all(requests.map(r => fetchPlus("https://analytics-api-saas.api.zup.me/logs/search", {
+	return Promise.all(requests.map(r => fetchPlus("https://analytics-api-aws.api.zup.me/logs/search", {
 		"headers": getCommonHeaders(),
 		"referrer": "https://vli.zup.me/api-manager/",
 		"referrerPolicy": "no-referrer-when-downgrade",
@@ -685,7 +685,7 @@ var appendResourceLogs = function (resource, entrypoints) {
 	var requestsParameters = entrypoints.map(e => resource.resource_methods.map(m => (
 		{ apiVersionId: resource.api_version, entrypointName: e.name, entrypointId: e.id, resourceId: resource.id, httpVerb: m }))).flat();
 
-	var requests = requestsParameters.map(r => fetchPlus("https://analytics-api-saas.api.zup.me/logs/search", {
+	var requests = requestsParameters.map(r => fetchPlus("https://analytics-api-aws.api.zup.me/logs/search", {
 		"headers": getCommonHeaders(),
 		"referrer": "https://vli.zup.me/api-manager/",
 		"referrerPolicy": "no-referrer-when-downgrade",
@@ -966,7 +966,7 @@ var appendPortalLogs = function(p) {
 		 && _.isArray(p["default_entry_points"]) && p["default_entry_points"].length > 0 ) {
 
 		var requests =  p["default_entry_points"].map(e => ({applicationId : p.clientApplications[0].id, entrypointId : e.id }));
-		return Promise.all(requests.map(r => fetchPlus("https://analytics-api-saas.api.zup.me/logs/search", {
+		return Promise.all(requests.map(r => fetchPlus("https://analytics-api-aws.api.zup.me/logs/search", {
 			"headers": getCommonHeaders(),
 			"referrer": "https://vli.zup.me/api-manager/",
 			"referrerPolicy": "no-referrer-when-downgrade",
